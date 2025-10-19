@@ -37,7 +37,7 @@ export default function UserDropdown() {
         <Image
           width={44}
           height={44}
-            src="/images/user/owner.jpg"
+            src="/images/user/user.jpg"
           alt="User"
           className="rounded-full"
         />
@@ -56,7 +56,7 @@ export default function UserDropdown() {
           <Image
             width={44}
             height={44}
-            src="/images/user/owner.jpg" // tu peux remplacer par user.image si ton modèle User le contient
+            src="/images/user/user.jpg" // tu peux remplacer par user.image si ton modèle User le contient
             alt={user.name}
           />
         </span>
