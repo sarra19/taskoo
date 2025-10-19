@@ -38,8 +38,7 @@ const navItems: NavItem[] = [
     name: "Task",
     icon: <CopyIcon />,
     subItems: [
-      { name: "List", path: "/blank", pro: false },
-      { name: "Kanban", path: "/error-404", pro: false },
+      { name: "List", path: "/list", pro: false },
     ],
   },
   {
