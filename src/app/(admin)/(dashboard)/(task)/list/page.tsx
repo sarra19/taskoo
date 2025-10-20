@@ -23,7 +23,7 @@ export default function TaskListPage() {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 👇 Séparer les modals
+ 
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -269,14 +269,14 @@ export default function TaskListPage() {
         </div>
       </div>
 
-      {/* ✅ Add Task Modal */}
+      {/* Add Task Modal */}
       <TaskModal
         isOpen={isAddModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSave={handleSave}
       />
 
-      {/* ✏️ Edit Task Modal */}
+      {/* Edit Task Modal */}
       {selectedTask && (
         <TaskModalEdit
           isOpen={isEditModalOpen}

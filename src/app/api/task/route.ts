@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import Task from "@/models/Task";
 
-// ✅ Validation schema
 const taskSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
@@ -14,7 +13,7 @@ const taskSchema = z.object({
   dueDate: z.string(),
 });
 
-// ✅ Middleware helper: get user from token
+//  Middleware helper: get user from token
 async function getUserIdFromRequest(req: Request) {
   const cookieHeader = req.headers.get("cookie");
   const token = cookieHeader
@@ -34,7 +33,7 @@ async function getUserIdFromRequest(req: Request) {
   }
 }
 
-// ✅ GET → list tasks (with optional filters)
+//  GET → list tasks (with optional filters)
 export async function GET(req: Request) {
   try {
     const userId = await getUserIdFromRequest(req);
@@ -63,7 +62,7 @@ export async function GET(req: Request) {
   }
 }
 
-// ✅ POST → create new task
+// POST → create new task
 export async function POST(req: Request) {
   try {
     const userId = await getUserIdFromRequest(req);

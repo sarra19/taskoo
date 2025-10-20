@@ -9,13 +9,13 @@ export default function LogoutPage() {
   useEffect(() => {
     const handleLogout = async () => {
       try {
-        // 🔹 Call your logout API route
+        
         const res = await fetch("/api/auth/logout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
 
-        // ✅ Whether it succeeds or not, send to signin
+       
         router.push("/signin");
       } catch (error) {
         console.error("Logout failed:", error);
@@ -27,8 +27,10 @@ export default function LogoutPage() {
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center h-screen text-gray-700 dark:text-gray-200">
+   <div className="flex flex-col flex-1 lg:w-1/2 w-full">
+      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
       <p>Signing out...</p>
+    </div>
     </div>
   );
 }

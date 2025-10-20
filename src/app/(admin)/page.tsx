@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 
-import TaskListPage from "./(others-pages)/(task)/list/page";
+import TaskListPage from "./(dashboard)/(task)/list/page";
 
 export const metadata: Metadata = {
   title:

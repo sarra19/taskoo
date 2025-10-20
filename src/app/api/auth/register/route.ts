@@ -4,7 +4,7 @@ import { z, ZodError } from "zod";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 
-// ✅ Schéma Zod
+
 const registerSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères."),
   email: z.string().email("Email invalide."),
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // ✅ Validation du body
+   
     const { name, email, password } = registerSchema.parse(body);
 
     await connectDB();
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Register error:", error);
 
-    // ✅ Gestion propre des erreurs Zod
+ 
     if (error instanceof ZodError) {
       return NextResponse.json(
   {

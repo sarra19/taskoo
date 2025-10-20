@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const response = NextResponse.redirect(new URL("/signin", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
 
-  // 🧹 Supprime le cookie d'authentification
+  // Supprime le cookie d'authentification
   response.cookies.set({
     name: "token",
     value: "",
@@ -18,7 +18,6 @@ export async function GET() {
 }
 
 export async function POST() {
-  // Même logique si jamais on fait un logout via POST (optionnel)
   const response = NextResponse.redirect(new URL("/signin", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
   response.cookies.set({
     name: "token",

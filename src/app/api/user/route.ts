@@ -5,9 +5,12 @@ import { z, ZodError } from "zod";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
 
-// ✅ Schéma Zod pour valider les champs du body
+
 const updateUserSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères.").optional(),
+  name: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères.")
+    .optional(),
   email: z.string().email("Email invalide.").optional(),
   newPassword: z
     .string()
@@ -17,29 +20,34 @@ const updateUserSchema = z.object({
 
 export async function PUT(req: Request) {
   try {
-    // ✅ Récupération du token depuis les cookies
     const cookieHeader = req.headers.get("cookie");
     const token = cookieHeader
       ?.split("; ")
       .find((c) => c.startsWith("token="))
       ?.split("=")[1];
 
-    if (!token) {
+    if (!token)
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
 
-    // ✅ Vérification du token JWT
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
       userId: string;
     };
 
-    // ✅ Lecture + validation du body
     const body = await req.json();
-    const { name, email, newPassword } = updateUserSchema.parse(body);
+
+    const parsed = updateUserSchema.safeParse(body);
+    if (!parsed.success) {
+      const errors = parsed.error.issues.map((issue) => ({
+        path: issue.path[0],
+        message: issue.message,
+      }));
+      return NextResponse.json({ errors }, { status: 400 });
+    }
+
+    const { name, email, newPassword } = parsed.data;
 
     await connectDB();
 
-    // ✅ Préparation des champs à mettre à jour
     const updates: Record<string, any> = {};
     if (name) updates.name = name;
     if (email) updates.email = email;
@@ -48,16 +56,14 @@ export async function PUT(req: Request) {
       updates.passwordHash = hashedPassword;
     }
 
-    // ✅ Mise à jour dans la base de données
     const updatedUser = await User.findByIdAndUpdate(
       payload.userId,
       { $set: updates },
       { new: true }
     ).select("-passwordHash");
 
-    if (!updatedUser) {
+    if (!updatedUser)
       return NextResponse.json({ message: "User not found" }, { status: 404 });
-    }
 
     return NextResponse.json({
       message: "User updated successfully",
@@ -66,17 +72,8 @@ export async function PUT(req: Request) {
   } catch (error: any) {
     console.error("Update error:", error);
 
-    // ✅ Gestion propre des erreurs Zod
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        { message: error.issues.map((e) => e.message).join(", ") },
-        { status: 400 }
-      );
-    }
-
-    if (error.name === "TokenExpiredError") {
+    if (error.name === "TokenExpiredError")
       return NextResponse.json({ message: "Token expired" }, { status: 401 });
-    }
 
     return NextResponse.json({ message: "Update failed" }, { status: 500 });
   }

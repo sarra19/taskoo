@@ -12,8 +12,8 @@ import {
   EventContentArg,
 } from "@fullcalendar/core";
 
-import TaskModalEdit from "@/app/(admin)/(others-pages)/(task)/edit/page";
-import TaskModal from "@/app/(admin)/(others-pages)/(task)/add/page";
+import TaskModalEdit from "@/app/(admin)/(dashboard)/(task)/edit/page";
+import TaskModal from "@/app/(admin)/(dashboard)/(task)/add/page";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -34,7 +34,6 @@ const TaskCalendar: React.FC = () => {
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
 
-  // ✅ Fetch tasks
   const fetchTasks = async () => {
     try {
       const res = await fetch("/api/task");
@@ -67,7 +66,6 @@ const TaskCalendar: React.FC = () => {
     fetchTasks();
   }, []);
 
-  // ✅ Add task on date select
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     setSelectedTask({
       title: "",
@@ -80,7 +78,6 @@ const TaskCalendar: React.FC = () => {
     setAddModalOpen(true);
   };
 
-  // ✅ Edit task
   const handleEventClick = (clickInfo: EventClickArg) => {
     const props = clickInfo.event.extendedProps;
 
@@ -169,14 +166,12 @@ const TaskCalendar: React.FC = () => {
         />
       </div>
 
-      {/* ➕ Add Task Modal */}
       <TaskModal
         isOpen={isAddModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSave={handleSaveTask}
       />
 
-      {/* ✏️ Edit Task Modal */}
       {selectedTask && (
         <TaskModalEdit
           isOpen={isEditModalOpen}

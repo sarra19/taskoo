@@ -6,20 +6,15 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import DatePicker from "@/components/form/date-picker";
+import Alert from "@/components/ui/alert/Alert"; 
 
 type TaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: any) => void;
-  initialData?: any;
 };
 
-export default function TaskModalEdit({
-  isOpen,
-  onClose,
-  onSave,
-  initialData,
-}: TaskModalProps) {
+export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -27,38 +22,36 @@ export default function TaskModalEdit({
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
-  // ✅ Prefill fields when editing or reset on open
+  
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Reset form and alerts each time modal opens
   useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title || "");
-      setDescription(initialData.description || "");
-      setTags(initialData.tags || []);
-      setStatus(initialData.status || "todo");
-      setPriority(initialData.priority || "medium");
-      setDueDate(initialData.dueDate ? new Date(initialData.dueDate) : null);
-    } else if (isOpen) {
+    if (isOpen) {
       setTitle("");
       setDescription("");
       setTags([]);
       setStatus("todo");
       setPriority("medium");
       setDueDate(null);
+      setFieldErrors({});
+      setSuccessMsg("");
+      setErrorMsg("");
     }
-    setFieldErrors({});
-  }, [initialData, isOpen]);
+  }, [isOpen]);
 
   const handleSubmit = async () => {
     setSaving(true);
     setFieldErrors({});
+    setSuccessMsg("");
+    setErrorMsg("");
 
     try {
-      const method = initialData ? "PUT" : "POST";
-      const url = initialData ? `/api/task/${initialData._id}` : "/api/task";
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch("/api/task", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
@@ -73,7 +66,6 @@ export default function TaskModalEdit({
       const data = await res.json();
 
       if (!res.ok) {
-        // 🧾 Handle backend validation errors (Zod)
         if (Array.isArray(data.errors)) {
           const errors: Record<string, string> = {};
           data.errors.forEach((err: { path: string; message: string }) => {
@@ -82,13 +74,20 @@ export default function TaskModalEdit({
           setFieldErrors(errors);
           return;
         }
-        throw new Error(data.message || "Error saving task");
+
+        setErrorMsg(data.message || "An error occurred while saving the task.");
+        return;
       }
 
-      onSave(data);
-      onClose();
+      // ✅ Success
+      setSuccessMsg("Task successfully added!");
+      setTimeout(() => {
+        onSave(data);
+        onClose();
+      }, 1500);
     } catch (err: any) {
-      alert(err.message);
+      console.error(err);
+      setErrorMsg(err.message || "Network error occurred.");
     } finally {
       setSaving(false);
     }
@@ -98,10 +97,29 @@ export default function TaskModalEdit({
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[500px] m-4">
       <div className="rounded-2xl bg-white p-6 dark:bg-gray-900">
         <h3 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">
-          {initialData ? "Edit Task" : "Add New Task"}
+          Add New Task
         </h3>
 
-        <div className="flex flex-col gap-4">
+       
+        {errorMsg && (
+          <Alert
+            variant="error"
+            title="Failed to Save Task"
+            message={errorMsg}
+            showLink={false}
+          />
+        )}
+
+        {successMsg && (
+          <Alert
+            variant="success"
+            title="Success"
+            message={successMsg}
+            showLink={false}
+          />
+        )}
+
+        <div className="flex flex-col gap-4 mt-4">
           {/* Title */}
           <div>
             <Label>Title</Label>
@@ -184,7 +202,9 @@ export default function TaskModalEdit({
               <option value="urgent">Urgent</option>
             </select>
             {fieldErrors.priority && (
-              <p className="mt-1 text-sm text-error-500">{fieldErrors.priority}</p>
+              <p className="mt-1 text-sm text-error-500">
+                {fieldErrors.priority}
+              </p>
             )}
           </div>
 
@@ -194,14 +214,15 @@ export default function TaskModalEdit({
             <DatePicker
               id="date-picker"
               placeholder="Choose a date"
-              defaultDate={dueDate ? [dueDate] : []}
               onChange={(dates: Date[], _currentDateString: string) => {
                 const selectedDate = dates?.length ? dates[0] : null;
                 setDueDate(selectedDate);
               }}
             />
             {fieldErrors.dueDate && (
-              <p className="mt-1 text-sm text-error-500">{fieldErrors.dueDate}</p>
+              <p className="mt-1 text-sm text-error-500">
+                {fieldErrors.dueDate}
+              </p>
             )}
           </div>
         </div>
@@ -212,7 +233,7 @@ export default function TaskModalEdit({
             Cancel
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving..." : "Add Task"}
           </Button>
         </div>
       </div>

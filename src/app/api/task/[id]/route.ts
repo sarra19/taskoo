@@ -32,7 +32,7 @@ async function getUserIdFromRequest(req: Request) {
   }
 }
 
-// ✅ GET one task
+//  GET one task
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const userId = await getUserIdFromRequest(req);
@@ -52,7 +52,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-// ✅ PUT update task
+// PUT update task
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const userId = await getUserIdFromRequest(req);
@@ -89,7 +89,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-// ✅ DELETE (soft delete)
+// DELETE (soft delete)
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const userId = await getUserIdFromRequest(req);

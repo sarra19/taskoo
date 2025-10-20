@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
-import { CalenderIcon } from "../../icons";
 import Hook = flatpickr.Options.Hook;
 import DateOption = flatpickr.Options.DateOption;
+import { CalenderIcon } from "../../../public/images/icons";
 
 type PropsType = {
   id: string;

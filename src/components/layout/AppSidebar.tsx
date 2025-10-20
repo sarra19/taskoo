@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSidebar } from "../context/SidebarContext";
+import { useSidebar } from "../../context/SidebarContext";
 import {
   BoxCubeIcon,
   CalenderIcon,
@@ -16,7 +16,7 @@ import {
   PlugInIcon,
   ChevronLeftIcon,
   UserCircleIcon,
-} from "../icons/index";
+} from "../../../public/images/icons/index";
 import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
