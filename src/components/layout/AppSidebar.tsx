@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
     name: "Task",
     icon: <CopyIcon />,
     subItems: [
-      { name: "List", path: "/list", pro: false },
+      { name: "List", path: "/", pro: false },
     ],
   },
   {

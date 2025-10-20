@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Calendar, Plus, Edit, Trash2, Search } from "lucide-react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import TaskModal from "../add/page";
-import TaskModalEdit from "../edit/page";
+import TaskModal from "../../../../components/task/addModal";
+import TaskModalEdit from "../../../../components/task/editModal";
 
 type Task = {
   _id: string;

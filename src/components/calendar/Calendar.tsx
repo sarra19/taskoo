@@ -12,8 +12,8 @@ import {
   EventContentArg,
 } from "@fullcalendar/core";
 
-import TaskModalEdit from "@/app/(admin)/(dashboard)/(task)/edit/page";
-import TaskModal from "@/app/(admin)/(dashboard)/(task)/add/page";
+import TaskModalEdit from "@/components/task/editModal";
+import TaskModal from "@/components/task/addModal";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
