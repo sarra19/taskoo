@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import Task from "@/models/Task";
@@ -74,6 +74,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json(task);
   } catch (error: any) {
     console.error("PUT /api/task/[id] error:", error);
+    if (error instanceof ZodError) {
+          return NextResponse.json(
+      {
+              message: "Validation error",
+              errors: error.issues.map((issue) => ({
+                path: issue.path.join("."),
+                message: issue.message,
+              })),
+            },        { status: 400 }
+          );
+        }
     return NextResponse.json({ message: error.message }, { status: 400 });
   }
 }
@@ -97,6 +108,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     return NextResponse.json({ message: "Task deleted" });
   } catch (error: any) {
     console.error("DELETE /api/task/[id] error:", error);
+    
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }

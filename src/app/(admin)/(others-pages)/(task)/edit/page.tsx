@@ -27,8 +27,9 @@ export default function TaskModalEdit({
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // ✅ Pré-remplissage si édition
+  // ✅ Prefill fields when editing or reset on open
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || "");
@@ -38,7 +39,6 @@ export default function TaskModalEdit({
       setPriority(initialData.priority || "medium");
       setDueDate(initialData.dueDate ? new Date(initialData.dueDate) : null);
     } else if (isOpen) {
-      // 🧹 Reset du formulaire quand on ouvre en "ajout"
       setTitle("");
       setDescription("");
       setTags([]);
@@ -46,10 +46,13 @@ export default function TaskModalEdit({
       setPriority("medium");
       setDueDate(null);
     }
+    setFieldErrors({});
   }, [initialData, isOpen]);
 
   const handleSubmit = async () => {
     setSaving(true);
+    setFieldErrors({});
+
     try {
       const method = initialData ? "PUT" : "POST";
       const url = initialData ? `/api/task/${initialData._id}` : "/api/task";
@@ -68,7 +71,19 @@ export default function TaskModalEdit({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Error saving task");
+
+      if (!res.ok) {
+        // 🧾 Handle backend validation errors (Zod)
+        if (Array.isArray(data.errors)) {
+          const errors: Record<string, string> = {};
+          data.errors.forEach((err: { path: string; message: string }) => {
+            errors[err.path] = err.message;
+          });
+          setFieldErrors(errors);
+          return;
+        }
+        throw new Error(data.message || "Error saving task");
+      }
 
       onSave(data);
       onClose();
@@ -82,7 +97,7 @@ export default function TaskModalEdit({
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-[500px] m-4">
       <div className="rounded-2xl bg-white p-6 dark:bg-gray-900">
-        <h3 className="text-xl font-semibold mb-4">
+        <h3 className="text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">
           {initialData ? "Edit Task" : "Add New Task"}
         </h3>
 
@@ -95,6 +110,9 @@ export default function TaskModalEdit({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title"
             />
+            {fieldErrors.title && (
+              <p className="mt-1 text-sm text-error-500">{fieldErrors.title}</p>
+            )}
           </div>
 
           {/* Description */}
@@ -107,6 +125,11 @@ export default function TaskModalEdit({
               className="w-full rounded-md border border-gray-300 p-2 text-sm dark:bg-gray-800 dark:text-gray-200"
               rows={3}
             />
+            {fieldErrors.description && (
+              <p className="mt-1 text-sm text-error-500">
+                {fieldErrors.description}
+              </p>
+            )}
           </div>
 
           {/* Tags */}
@@ -124,6 +147,9 @@ export default function TaskModalEdit({
               }
               placeholder="e.g. frontend, bug, urgent"
             />
+            {fieldErrors.tags && (
+              <p className="mt-1 text-sm text-error-500">{fieldErrors.tags}</p>
+            )}
           </div>
 
           {/* Status */}
@@ -137,7 +163,11 @@ export default function TaskModalEdit({
               <option value="todo">To Do</option>
               <option value="in-progress">In Progress</option>
               <option value="done">Completed</option>
+              <option value="blocked">Blocked</option>
             </select>
+            {fieldErrors.status && (
+              <p className="mt-1 text-sm text-error-500">{fieldErrors.status}</p>
+            )}
           </div>
 
           {/* Priority */}
@@ -153,6 +183,9 @@ export default function TaskModalEdit({
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
+            {fieldErrors.priority && (
+              <p className="mt-1 text-sm text-error-500">{fieldErrors.priority}</p>
+            )}
           </div>
 
           {/* Due Date */}
@@ -167,6 +200,9 @@ export default function TaskModalEdit({
                 setDueDate(selectedDate);
               }}
             />
+            {fieldErrors.dueDate && (
+              <p className="mt-1 text-sm text-error-500">{fieldErrors.dueDate}</p>
+            )}
           </div>
         </div>
 

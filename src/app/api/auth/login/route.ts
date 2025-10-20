@@ -1,32 +1,38 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
 
+// ✅ Define validation schema
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().email({ message: "A valid email is required" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // ✅ Validate request body using Zod
     const { email, password } = loginSchema.parse(body);
 
     await connectDB();
 
+    // ✅ Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // ✅ Check password
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       return NextResponse.json({ message: "Invalid password" }, { status: 401 });
     }
 
+    // ✅ Generate JWT
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET!,
@@ -54,10 +60,27 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (err: any) {
+
+  } catch (err: unknown) {
     console.error("Login error:", err);
+
+    // ✅ Handle Zod validation errors properly
+    if (err instanceof ZodError) {
+      return NextResponse.json(
+        {
+          message: "Validation error",
+          errors: err.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Handle other errors
     return NextResponse.json(
-      { message: err.message || "Internal Server Error" },
+      { message: (err as Error).message || "Internal Server Error" },
       { status: 500 }
     );
   }

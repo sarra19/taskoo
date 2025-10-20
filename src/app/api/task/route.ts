@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import Task from "@/models/Task";
 
 // ✅ Validation schema
 const taskSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters").optional(),
+  title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
   status: z.enum(["todo", "in-progress", "done", "blocked"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   tags: z.array(z.string()).optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string(),
 });
 
 // ✅ Middleware helper: get user from token
@@ -78,6 +78,18 @@ export async function POST(req: Request) {
     return NextResponse.json(task, { status: 201 });
   } catch (err: any) {
     console.error("POST /api/task error:", err);
+    if (err instanceof ZodError) {
+          return NextResponse.json(
+            {
+              message: "Validation error",
+              errors: err.issues.map((issue) => ({
+                path: issue.path.join("."),
+                message: issue.message,
+              })),
+            },
+            { status: 400 }
+          );
+        }
     return NextResponse.json(
       { message: err.errors || err.message },
       { status: 400 }

@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { z, ZodError } from "zod";
 import User from "@/models/User";
 import { connectDB } from "@/lib/db";
+
+// ✅ Schéma Zod pour valider les champs du body
+const updateUserSchema = z.object({
+  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères.").optional(),
+  email: z.string().email("Email invalide.").optional(),
+  newPassword: z
+    .string()
+    .min(6, "Le mot de passe doit contenir au moins 6 caractères.")
+    .optional(),
+});
 
 export async function PUT(req: Request) {
   try {
@@ -22,14 +33,14 @@ export async function PUT(req: Request) {
       userId: string;
     };
 
-    // ✅ Lecture du body JSON
+    // ✅ Lecture + validation du body
     const body = await req.json();
-    const { name, email, newPassword } = body;
+    const { name, email, newPassword } = updateUserSchema.parse(body);
 
     await connectDB();
 
     // ✅ Préparation des champs à mettre à jour
-    const updates: any = {};
+    const updates: Record<string, any> = {};
     if (name) updates.name = name;
     if (email) updates.email = email;
     if (newPassword && newPassword.trim().length > 0) {
@@ -54,9 +65,19 @@ export async function PUT(req: Request) {
     });
   } catch (error: any) {
     console.error("Update error:", error);
+
+    // ✅ Gestion propre des erreurs Zod
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { message: error.issues.map((e) => e.message).join(", ") },
+        { status: 400 }
+      );
+    }
+
     if (error.name === "TokenExpiredError") {
       return NextResponse.json({ message: "Token expired" }, { status: 401 });
     }
+
     return NextResponse.json({ message: "Update failed" }, { status: 500 });
   }
 }
