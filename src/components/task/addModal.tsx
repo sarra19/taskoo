@@ -6,15 +6,23 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import DatePicker from "@/components/form/date-picker";
-import Alert from "@/components/ui/alert/Alert"; 
+import Alert from "@/components/ui/alert/Alert";
 
 type TaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: any) => void;
+  assignedTo?: string | null;
+  projectId: string;
 };
 
-export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
+export default function TaskModal({
+  isOpen,
+  onClose,
+  onSave,
+  assignedTo,
+  projectId,
+}: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -23,14 +31,12 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
-
-  
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Reset form and alerts each time modal opens
+  // ✅ Reset form every time modal opens or closes
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen || isOpen) {
       setTitle("");
       setDescription("");
       setTags([]);
@@ -44,6 +50,11 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
   }, [isOpen]);
 
   const handleSubmit = async () => {
+    if (!assignedTo) {
+      setErrorMsg("No team member selected for this task.");
+      return;
+    }
+
     setSaving(true);
     setFieldErrors({});
     setSuccessMsg("");
@@ -60,6 +71,8 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
           status,
           priority,
           dueDate: dueDate ? dueDate.toISOString() : null,
+          assignedTo,
+          projectId,
         }),
       });
 
@@ -79,12 +92,11 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
         return;
       }
 
-      // ✅ Success
       setSuccessMsg("Task successfully added!");
       setTimeout(() => {
         onSave(data);
         onClose();
-      }, 1500);
+      }, 1000);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "Network error occurred.");
@@ -100,7 +112,6 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
           Add New Task
         </h3>
 
-       
         {errorMsg && (
           <Alert
             variant="error"
@@ -120,7 +131,6 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
         )}
 
         <div className="flex flex-col gap-4 mt-4">
-          {/* Title */}
           <div>
             <Label>Title</Label>
             <Input
@@ -129,11 +139,10 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
               placeholder="Task title"
             />
             {fieldErrors.title && (
-              <p className="mt-1 text-sm text-error-500">{fieldErrors.title}</p>
+              <p className="text-xs text-red-500">{fieldErrors.title}</p>
             )}
           </div>
 
-          {/* Description */}
           <div>
             <Label>Description</Label>
             <textarea
@@ -144,13 +153,10 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
               rows={3}
             />
             {fieldErrors.description && (
-              <p className="mt-1 text-sm text-error-500">
-                {fieldErrors.description}
-              </p>
+              <p className="text-xs text-red-500">{fieldErrors.description}</p>
             )}
           </div>
 
-          {/* Tags */}
           <div>
             <Label>Tags (comma-separated)</Label>
             <Input
@@ -165,12 +171,8 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
               }
               placeholder="e.g. frontend, bug, urgent"
             />
-            {fieldErrors.tags && (
-              <p className="mt-1 text-sm text-error-500">{fieldErrors.tags}</p>
-            )}
           </div>
 
-          {/* Status */}
           <div>
             <Label>Status</Label>
             <select
@@ -183,12 +185,8 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
               <option value="done">Completed</option>
               <option value="blocked">Blocked</option>
             </select>
-            {fieldErrors.status && (
-              <p className="mt-1 text-sm text-error-500">{fieldErrors.status}</p>
-            )}
           </div>
 
-          {/* Priority */}
           <div>
             <Label>Priority</Label>
             <select
@@ -201,14 +199,8 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
-            {fieldErrors.priority && (
-              <p className="mt-1 text-sm text-error-500">
-                {fieldErrors.priority}
-              </p>
-            )}
           </div>
 
-          {/* Due Date */}
           <div>
             <Label>Due Date</Label>
             <DatePicker
@@ -219,15 +211,9 @@ export default function TaskModal({ isOpen, onClose, onSave }: TaskModalProps) {
                 setDueDate(selectedDate);
               }}
             />
-            {fieldErrors.dueDate && (
-              <p className="mt-1 text-sm text-error-500">
-                {fieldErrors.dueDate}
-              </p>
-            )}
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-3 mt-6">
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel

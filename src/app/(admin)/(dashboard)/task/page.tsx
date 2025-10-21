@@ -3,8 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { Calendar, Plus, Edit, Trash2, Search } from "lucide-react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import TaskModal from "../../../../components/task/addModal";
-import TaskModalEdit from "../../../../components/task/editModal";
+import TaskModal from "@/components/task/addModal";
+import TaskModalEdit from "@/components/task/editModal";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { CalenderIcon } from "../../../../../public/images/icons";
 
 type Task = {
   _id: string;
@@ -14,6 +17,7 @@ type Task = {
   status: string;
   dueDate?: string;
   priority?: string;
+  project?: string;
 };
 
 export default function TaskListPage() {
@@ -22,11 +26,14 @@ export default function TaskListPage() {
   const [activeStatus, setActiveStatus] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-
- 
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
+  const { user } = useAuth();
+  const router = useRouter();
 
   const statuses = [
     { key: "todo", label: "To Do" },
@@ -34,31 +41,37 @@ export default function TaskListPage() {
     { key: "done", label: "Completed" },
   ];
 
-  // --- Fetch tasks ---
   const fetchTasks = async () => {
-    setLoading(true);
+    if (!projectId) return;
     try {
+      setLoading(true);
+
       const params = new URLSearchParams();
       if (activeStatus !== "all") params.append("status", activeStatus);
       if (priorityFilter) params.append("priority", priorityFilter);
       if (searchTerm.trim()) params.append("search", searchTerm.trim());
 
-      const res = await fetch(`/api/task?${params.toString()}`);
+      const res = await fetch(
+        `/api/task/project/${projectId}?${params.toString()}`
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setTasks(data);
-    } catch (err: any) {
-      console.error(err);
+
+      if (data.success) {
+        setTasks(data.data);
+      } else {
+        console.error("❌ Failed to fetch tasks:", data.message);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching tasks:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Debounce search ---
   useEffect(() => {
     const timeout = setTimeout(() => fetchTasks(), 300);
     return () => clearTimeout(timeout);
-  }, [activeStatus, priorityFilter, searchTerm]);
+  }, [activeStatus, priorityFilter, searchTerm, projectId]);
 
   const handleSave = () => fetchTasks();
 
@@ -85,9 +98,9 @@ export default function TaskListPage() {
     fetchTasks();
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) =>
+    e.preventDefault();
 
-  // --- Priority colors ---
   const priorityColors: Record<string, string> = {
     low: "bg-green-100 text-green-700 border-green-200",
     medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -95,7 +108,8 @@ export default function TaskListPage() {
     urgent: "bg-red-100 text-red-700 border-red-200",
   };
 
-  if (loading) return <p className="p-5 text-gray-500">Loading tasks...</p>;
+  if (loading)
+    return <p className="p-5 text-gray-500 text-center">Loading tasks...</p>;
 
   return (
     <div>
@@ -161,13 +175,21 @@ export default function TaskListPage() {
               />
             </div>
 
-            {/* Add Task */}
+            {/* ✅ Calendar Button */}
             <button
-              onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
-            >
-              <Plus size={16} /> Add Task
-            </button>
+  onClick={() => router.push(`/calendar?projectId=${projectId}`)}
+  disabled={!projectId} // disable if no project selected
+  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition
+    ${
+      projectId
+        ? "bg-indigo-600 text-white hover:bg-indigo-700"
+        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+    }`}
+>
+  <CalenderIcon className="w-4 h-4" />
+  <span>Calendar View</span>
+</button>
+
           </div>
         </div>
 
@@ -207,12 +229,14 @@ export default function TaskListPage() {
                         >
                           <Edit size={15} />
                         </button>
-                        <button
-                          onClick={() => handleDelete(task._id)}
-                          className="hover:text-red-600"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {user?.role === "admin" && (
+                          <button
+                            onClick={() => handleDelete(task._id)}
+                            className="hover:text-red-600"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
 
                       {/* Title */}
@@ -268,13 +292,6 @@ export default function TaskListPage() {
           ))}
         </div>
       </div>
-
-      {/* Add Task Modal */}
-      <TaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onSave={handleSave}
-      />
 
       {/* Edit Task Modal */}
       {selectedTask && (

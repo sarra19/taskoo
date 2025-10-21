@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 
-import TaskListPage from "./(dashboard)/task/page";
+import Projects from "./(public)/(home)/projects/page";
 
 export const metadata: Metadata = {
   title:
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function Ecommerce() {
   return (
-        <TaskListPage />
+        <Projects />
 
   
 

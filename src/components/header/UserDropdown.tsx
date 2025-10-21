@@ -5,11 +5,11 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
-import { useAuth } from "@/hooks/useAuth"; // 🔥 Assure-toi que le chemin est correct
+import { useAuth } from "@/hooks/useAuth";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, loading } = useAuth(); // 👈 récupération du user connecté
+  const { user, loading } = useAuth();
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -21,11 +21,7 @@ export default function UserDropdown() {
   }
 
   if (loading) {
-    return (
-      <div className="text-gray-500 dark:text-gray-400">
-        Chargement...
-      </div>
-    );
+    return <div className="text-gray-500 dark:text-gray-400">Chargement...</div>;
   }
 
   if (!user) {
@@ -37,7 +33,7 @@ export default function UserDropdown() {
         <Image
           width={44}
           height={44}
-            src="/images/user/user.jpg"
+          src="/images/user/user.jpg"
           alt="User"
           className="rounded-full"
         />
@@ -56,8 +52,10 @@ export default function UserDropdown() {
           <Image
             width={44}
             height={44}
-            src="/images/user/user.jpg" // tu peux remplacer par user.image si ton modèle User le contient
+            // ✅ affiche l’avatar réel du user connecté ou une image par défaut
+            src={user.avatar || "/images/default-avatar.png"}
             alt={user.name}
+            className="object-cover"
           />
         </span>
 
@@ -110,10 +108,6 @@ export default function UserDropdown() {
               Edit profile
             </DropdownItem>
           </li>
-
-          
-
-         
         </ul>
 
         <Link

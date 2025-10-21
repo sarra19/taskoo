@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { z, ZodError } from "zod";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import Task from "@/models/Task";
+import User from "@/models/User";
+import { z, ZodError } from "zod";
 
+// ✅ Validation schema
 const taskSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
@@ -11,9 +13,10 @@ const taskSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   tags: z.array(z.string()).optional(),
   dueDate: z.string(),
+  projectId: z.string().min(1, "Project is required"),
 });
 
-//  Middleware helper: get user from token
+// ✅ Helper — get current user ID from JWT token
 async function getUserIdFromRequest(req: Request) {
   const cookieHeader = req.headers.get("cookie");
   const token = cookieHeader
@@ -33,36 +36,43 @@ async function getUserIdFromRequest(req: Request) {
   }
 }
 
-//  GET → list tasks (with optional filters)
 export async function GET(req: Request) {
+  await connectDB();
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("projectId");
+  const assignedTo = searchParams.get("assignedTo");
+  const status = searchParams.get("status");
+  const priority = searchParams.get("priority");
+  const search = searchParams.get("search");
+
+  const filter: any = {};
+
+  if (projectId) filter.projectId = projectId;
+  if (assignedTo) filter.assignedTo = assignedTo;
+  if (status) filter.status = status;
+  if (priority) filter.priority = priority;
+  if (search) {
+    filter.title = { $regex: search, $options: "i" };
+  }
+
   try {
-    const userId = await getUserIdFromRequest(req);
-    if (!userId)
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const tasks = await Task.find(filter)
+      .populate("assignedTo", "_id name email avatar")
+      .populate("projectId", "_id title")
+      .sort({ createdAt: -1 });
 
-    await connectDB();
-
-    const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status");
-    const priority = searchParams.get("priority");
-    const search = searchParams.get("search");
-    const tag = searchParams.get("tag");
-
-    const filter: any = { createdBy: userId, deletedAt: null };
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (search) filter.title = { $regex: search, $options: "i" };
-    if (tag) filter.tags = { $in: [tag] };
-
-    const tasks = await Task.find(filter).sort({ createdAt: -1 });
-    return NextResponse.json(tasks);
+    return NextResponse.json({ success: true, data: tasks });
   } catch (error: any) {
-    console.error("GET /api/task error:", error);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    console.error("Error fetching tasks:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
-// POST → create new task
+
+// ✅ POST — Create a new task
 export async function POST(req: Request) {
   try {
     const userId = await getUserIdFromRequest(req);
@@ -73,22 +83,48 @@ export async function POST(req: Request) {
     const parsed = taskSchema.parse(body);
 
     await connectDB();
-    const task = await Task.create({ ...parsed, createdBy: userId });
+
+    // 🔍 Get current user
+    const currentUser = await User.findById(userId);
+    if (!currentUser)
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+
+    // ✅ Assign logic
+    let assignedUserId = userId;
+    if (currentUser.role === "admin" && body.assignedTo) {
+      const assignedUser = await User.findById(body.assignedTo);
+      if (!assignedUser) {
+        return NextResponse.json(
+          { message: "Assigned user not found" },
+          { status: 400 }
+        );
+      }
+      assignedUserId = assignedUser._id;
+    }
+
+    const task = await Task.create({
+      ...parsed,
+      createdBy: userId,
+      assignedTo: assignedUserId,
+      project: parsed.projectId,
+    });
+
     return NextResponse.json(task, { status: 201 });
   } catch (err: any) {
     console.error("POST /api/task error:", err);
     if (err instanceof ZodError) {
-          return NextResponse.json(
-            {
-              message: "Validation error",
-              errors: err.issues.map((issue) => ({
-                path: issue.path.join("."),
-                message: issue.message,
-              })),
-            },
-            { status: 400 }
-          );
-        }
+      return NextResponse.json(
+        {
+          message: "Validation error",
+          errors: err.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { message: err.errors || err.message },
       { status: 400 }

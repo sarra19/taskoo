@@ -11,7 +11,7 @@ import {
   GridIcon,
   HorizontaLDots,
   CopyIcon,
-  PageIcon,
+  FolderIcon,
   PieChartIcon,
   PlugInIcon,
   ChevronLeftIcon,
@@ -29,19 +29,13 @@ type NavItem = {
 const navItems: NavItem[] = [
 
 
+ {
+    icon: <FolderIcon />,
+    name: "Projects",
+    path: "/projects",
+  },
 
-  {
-    name: "Task",
-    icon: <CopyIcon />,
-    subItems: [
-      { name: "List", path: "/", pro: false },
-    ],
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
+
   // {
   //   name: "Pages",
   //   icon: <PageIcon />,

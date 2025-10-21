@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import {
   EventInput,
-  DateSelectArg,
   EventClickArg,
   EventContentArg,
 } from "@fullcalendar/core";
 
 import TaskModalEdit from "@/components/task/editModal";
-import TaskModal from "@/components/task/addModal";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
@@ -28,19 +27,24 @@ interface CalendarEvent extends EventInput {
 }
 
 const TaskCalendar: React.FC = () => {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId");
+
   const [tasks, setTasks] = useState<CalendarEvent[]>([]);
   const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
 
+  // ✅ Fetch tasks for this project
   const fetchTasks = async () => {
-    try {
-      const res = await fetch("/api/task");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch tasks");
+    if (!projectId) return;
 
-      const mappedEvents = data.map((task: any) => ({
+    try {
+      const res = await fetch(`/api/task/project/${projectId}`);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Failed to fetch tasks");
+
+      const mappedEvents = result.data.map((task: any) => ({
         id: task._id,
         title: task.title,
         start: task.dueDate,
@@ -64,20 +68,9 @@ const TaskCalendar: React.FC = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [projectId]);
 
-  const handleDateSelect = (selectInfo: DateSelectArg) => {
-    setSelectedTask({
-      title: "",
-      description: "",
-      tags: [],
-      status: "todo",
-      priority: "medium",
-      dueDate: selectInfo.startStr,
-    });
-    setAddModalOpen(true);
-  };
-
+  // ✅ Click to edit
   const handleEventClick = (clickInfo: EventClickArg) => {
     const props = clickInfo.event.extendedProps;
 
@@ -89,49 +82,33 @@ const TaskCalendar: React.FC = () => {
       status: props.status || "todo",
       priority: props.priority || "medium",
       dueDate: props.dueDate || clickInfo.event.startStr,
+      project: projectId,
     };
 
     setSelectedTask(clickedTask);
     setEditModalOpen(true);
   };
 
-  // ✅ Refresh after save/update
+  // ✅ Refresh after editing
   const handleSaveTask = async () => {
     await fetchTasks();
   };
 
-  // ✅ Render event with color by priority
+  // ✅ Render colored cards
   const renderEventContent = (eventInfo: EventContentArg) => {
     const priority = eventInfo.event.extendedProps.priority;
 
-    const colorMap: Record<
-      string,
-      { bg: string; border: string; text: string }
-    > = {
+    const colorMap: Record<string, { bg: string; border: string; text: string }> = {
       urgent: { bg: "bg-red-50", border: "bg-red-500", text: "text-red-800" },
-      high: {
-        bg: "bg-orange-50",
-        border: "bg-orange-500",
-        text: "text-orange-800",
-      },
-      medium: {
-        bg: "bg-blue-50",
-        border: "bg-blue-500",
-        text: "text-blue-800",
-      },
-      low: {
-        bg: "bg-green-50",
-        border: "bg-green-500",
-        text: "text-green-800",
-      },
+      high: { bg: "bg-orange-50", border: "bg-orange-500", text: "text-orange-800" },
+      medium: { bg: "bg-blue-50", border: "bg-blue-500", text: "text-blue-800" },
+      low: { bg: "bg-green-50", border: "bg-green-500", text: "text-green-800" },
     };
 
     const style = colorMap[priority] || colorMap["medium"];
 
     return (
-      <div
-        className={`flex items-center gap-2 px-2 py-1 rounded-md ${style.bg}`}
-      >
+      <div className={`flex items-center gap-2 px-2 py-1 rounded-md ${style.bg}`}>
         <div className={`w-1.5 h-4 rounded-full ${style.border}`} />
         <span className={`truncate text-sm font-medium ${style.text}`}>
           {eventInfo.event.title}
@@ -148,29 +125,16 @@ const TaskCalendar: React.FC = () => {
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           headerToolbar={{
-            left: "prev,next addTaskButton",
+            left: "prev,next",
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay",
           }}
-          selectable={true}
-          select={handleDateSelect}
+          selectable={false} // ❌ disable selecting new dates
           eventClick={handleEventClick}
           events={tasks}
           eventContent={renderEventContent}
-          customButtons={{
-            addTaskButton: {
-              text: "+ Add Task",
-              click: () => setAddModalOpen(true),
-            },
-          }}
         />
       </div>
-
-      <TaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onSave={handleSaveTask}
-      />
 
       {selectedTask && (
         <TaskModalEdit

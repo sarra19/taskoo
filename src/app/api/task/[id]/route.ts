@@ -52,7 +52,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-// PUT update task
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const userId = await getUserIdFromRequest(req);
@@ -61,9 +60,21 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     await connectDB();
 
-    const task = await Task.findOne({ _id: params.id, createdBy: userId });
+    // ✅ Allow update if user is the creator OR assigned to the task
+    const task = await Task.findOne({
+      _id: params.id,
+      deletedAt: null,
+    });
+
     if (!task)
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
+
+    if (task.createdBy.toString() !== userId && task.assignedTo.toString() !== userId) {
+      return NextResponse.json(
+        { message: "You are not allowed to edit this task" },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const parsed = taskSchema.parse(body);
@@ -71,23 +82,25 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     Object.assign(task, parsed);
     await task.save();
 
-    return NextResponse.json(task);
+    return NextResponse.json({ success: true, data: task });
   } catch (error: any) {
     console.error("PUT /api/task/[id] error:", error);
     if (error instanceof ZodError) {
-          return NextResponse.json(
-      {
-              message: "Validation error",
-              errors: error.issues.map((issue) => ({
-                path: issue.path.join("."),
-                message: issue.message,
-              })),
-            },        { status: 400 }
-          );
-        }
+      return NextResponse.json(
+        {
+          message: "Validation error",
+          errors: error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json({ message: error.message }, { status: 400 });
   }
 }
+
 
 // DELETE (soft delete)
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {

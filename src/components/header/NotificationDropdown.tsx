@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Task {
   _id: string;
@@ -12,19 +12,25 @@ interface Task {
   description?: string;
   priority: "urgent" | "high" | "medium" | "low";
   dueDate: string;
+  assignedTo?: string | { _id: string };
+  project?: string | { _id: string; title: string };
 }
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [notifications, setNotifications] = useState<Task[]>([]);
+  const { user } = useAuth();
 
-  // 🔔 Fetch tasks due tomorrow
+  // 🔔 Fetch tasks due tomorrow for current user (or all if admin)
   useEffect(() => {
+    if (!user?._id) return;
+
     const fetchTasks = async () => {
       try {
-        const res = await fetch("/api/task");
-        const data: Task[] = await res.json();
+        const res = await fetch("/api/task/all");
+        const result = await res.json();
+        const data: Task[] = result?.data || [];
 
         if (!Array.isArray(data)) return;
 
@@ -37,9 +43,20 @@ export default function NotificationDropdown() {
           date1.getMonth() === date2.getMonth() &&
           date1.getDate() === date2.getDate();
 
-        const tasksDueTomorrow = data.filter((task) =>
-          isSameDay(new Date(task.dueDate), tomorrow)
-        );
+        // ✅ Filter by date (and user unless admin)
+        const tasksDueTomorrow = data.filter((task) => {
+          const assignedId =
+            typeof task.assignedTo === "object"
+              ? (task.assignedTo as any)?._id
+              : task.assignedTo;
+
+          const isTomorrow =
+            task.dueDate &&
+            isSameDay(new Date(task.dueDate), tomorrow);
+
+          if (user.role === "admin") return isTomorrow;
+          return assignedId === user._id && isTomorrow;
+        });
 
         setNotifications(tasksDueTomorrow);
         setNotifying(tasksDueTomorrow.length > 0);
@@ -49,15 +66,12 @@ export default function NotificationDropdown() {
     };
 
     fetchTasks();
-
-    // ✅ Refresh every hour
-    const interval = setInterval(fetchTasks, 60 * 60 * 1000);
+    const interval = setInterval(fetchTasks, 60 * 60 * 1000); // Refresh hourly
     return () => clearInterval(interval);
-  }, []);
+  }, [user?._id, user?.role]);
 
   const toggleDropdown = () => setIsOpen((p) => !p);
   const closeDropdown = () => setIsOpen(false);
-
   const handleClick = () => {
     toggleDropdown();
     setNotifying(false);
@@ -65,7 +79,7 @@ export default function NotificationDropdown() {
 
   return (
     <div className="relative">
-      {/* 🔔 Notification Icon */}
+      {/* 🔔 Icon */}
       <button
         className="relative dropdown-toggle flex items-center justify-center text-gray-500 transition-colors bg-white border border-gray-200 rounded-full hover:text-gray-700 h-11 w-11 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
         onClick={handleClick}
@@ -91,7 +105,7 @@ export default function NotificationDropdown() {
         </svg>
       </button>
 
-      {/* 🔽 Dropdown content */}
+      {/* 🔽 Dropdown */}
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
@@ -109,7 +123,7 @@ export default function NotificationDropdown() {
           </button>
         </div>
 
-        {/* 📅 Notification list */}
+        {/* 📅 Notifications */}
         <ul className="flex flex-col h-auto overflow-y-auto custom-scrollbar">
           {notifications.length === 0 ? (
             <p className="text-center text-gray-500 text-sm py-10">
@@ -122,33 +136,32 @@ export default function NotificationDropdown() {
                   onItemClick={closeDropdown}
                   className="flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5"
                 >
-                  <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <svg
-                      className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </span>
-
                   <div className="flex flex-col">
                     <span className="font-medium text-gray-800 dark:text-white/90">
                       {task.title}
                     </span>
-                     <span className="font-medium text-gray-800 dark:text-white/90">
-                      {task.description}
-                    </span>
+
+                    {/* ✅ Project title */}
+                    {task.project && (
+                      <span className="text-xs text-indigo-600 dark:text-indigo-400">
+                        📁{" "}
+                        {typeof task.project === "object"
+                          ? (task.project as any).title
+                          : ""}
+                      </span>
+                    )}
+
+                    {task.description && (
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {task.description}
+                      </span>
+                    )}
+
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Due tomorrow ({new Date(task.dueDate).toLocaleDateString()})
+                      Due tomorrow (
+                      {new Date(task.dueDate).toLocaleDateString()})
                     </span>
+
                     <span
                       className={`mt-1 inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
                         task.priority === "urgent"
@@ -168,13 +181,6 @@ export default function NotificationDropdown() {
             ))
           )}
         </ul>
-
-        <Link
-          href="/"
-          className="block px-4 py-2 mt-3 text-sm font-medium text-center text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-        >
-          View All Tasks
-        </Link>
       </Dropdown>
     </div>
   );

@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import Button from "@/components/ui/button/Button";
-import Alert from "@/components/ui/alert/Alert"; 
+import Alert from "@/components/ui/alert/Alert";
+import Image from "next/image";
 
 export default function Profile() {
   const { user, loading } = useAuth();
@@ -15,9 +16,13 @@ export default function Profile() {
     email: "",
     newPassword: "",
   });
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState(""); 
+  const [successMsg, setSuccessMsg] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -27,11 +32,22 @@ export default function Profile() {
         email: user.email || "",
         newPassword: "",
       });
+      setAvatarPreview(user.avatar || "/default-avatar.png"); // Image par défaut
     }
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // ✅ Gestion upload avatar
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
   };
 
   const handleSave = async () => {
@@ -41,16 +57,20 @@ export default function Profile() {
     setFieldErrors({});
 
     try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("newPassword", formData.newPassword);
+      if (avatarFile) formDataToSend.append("avatar", avatarFile);
+
       const res = await fetch("/api/user", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: formDataToSend, // ⚡ on envoie FormData pour gérer upload
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-       
         if (data.errors && Array.isArray(data.errors)) {
           const errors: Record<string, string> = {};
           data.errors.forEach(
@@ -65,7 +85,6 @@ export default function Profile() {
         return;
       }
 
-      // ✅ success
       setSuccessMsg("Profile updated successfully!");
       setFormData({ ...formData, newPassword: "" });
     } catch (error) {
@@ -79,9 +98,7 @@ export default function Profile() {
   if (loading)
     return (
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800">
-        <p className="text-gray-500 dark:text-gray-400">
-          Loading profile...
-        </p>
+        <p className="text-gray-500 dark:text-gray-400">Loading profile...</p>
       </div>
     );
 
@@ -106,21 +123,32 @@ export default function Profile() {
 
         {/* ✅ Alerts */}
         {errorMsg && (
-          <Alert
-            variant="error"
-            title="Error"
-            message={errorMsg}
-            showLink={false}
-          />
+          <Alert variant="error" title="Error" message={errorMsg} showLink={false} />
         )}
         {successMsg && (
-          <Alert
-            variant="success"
-            title="Success"
-            message={successMsg}
-            showLink={false}
-          />
+          <Alert variant="success" title="Success" message={successMsg} showLink={false} />
         )}
+
+        {/* ✅ Avatar */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative w-28 h-28">
+            <Image
+              src={avatarPreview || "/default-avatar.png"}
+              alt="User avatar"
+              fill
+              className="rounded-full object-cover border border-gray-200 dark:border-gray-700"
+            />
+          </div>
+          <label className="mt-3 text-sm font-medium text-gray-500 cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+            Change avatar
+          </label>
+        </div>
 
         <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2 mt-4">
           <div>

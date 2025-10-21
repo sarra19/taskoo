@@ -4,7 +4,11 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Alert from "@/components/ui/alert/Alert";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../../public/images/icons";
+import {
+  ChevronLeftIcon,
+  EyeCloseIcon,
+  EyeIcon,
+} from "../../../public/images/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -14,15 +18,15 @@ export default function SignUpForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
-  
   const [alert, setAlert] = useState<{
     type: "success" | "error" | null;
     message: string;
@@ -32,24 +36,39 @@ export default function SignUpForm() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // 🧩 Handle avatar selection + preview
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatar(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
-    setFieldErrors({});
     setAlert({ type: null, message: "" });
+    setFieldErrors({});
 
     if (!isChecked) {
-      setAlert({ type: "error", message: "You must accept Terms and Conditions" });
+      setAlert({
+        type: "error",
+        message: "You must accept Terms and Conditions",
+      });
       return;
     }
 
     setLoading(true);
-
     try {
+      const body = new FormData();
+      body.append("name", formData.name);
+      body.append("email", formData.email);
+      body.append("password", formData.password);
+      if (avatar) body.append("avatar", avatar);
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body,
       });
 
       const data = await res.json();
@@ -64,20 +83,17 @@ export default function SignUpForm() {
           setFieldErrors(errors);
           return;
         }
-
-        if (data.error === "Email déjà utilisé.") {
-          setAlert({ type: "error", message: "This email is already registered." });
-          return;
-        }
-
         setAlert({
           type: "error",
-          message: data.message || data.error || "Registration failed",
+          message: data.message || "Registration failed",
         });
         return;
       }
 
-      setAlert({ type: "success", message: "Account created successfully! Redirecting..." });
+      setAlert({
+        type: "success",
+        message: "Account created successfully! Redirecting...",
+      });
 
       setTimeout(() => {
         router.push("/signin");
@@ -108,7 +124,7 @@ export default function SignUpForm() {
               Sign Up
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your email and password to sign up!
+              Enter your details to create an account!
             </p>
           </div>
 
@@ -123,96 +139,126 @@ export default function SignUpForm() {
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-5">
-              {/* Name */}
-              <div>
-                <Label>
-                  Name<span className="text-error-500">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  name="name"
-                  placeholder="Enter your name"
-                  defaultValue={formData.name}
-                  onChange={handleChange}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Avatar */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                <img
+                  src={
+                    avatarPreview ||
+                    "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                  }
+                  alt="Avatar Preview"
+                  className="w-20 h-20 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                 />
-                {fieldErrors.name && (
-                  <p className="mt-1 text-sm text-error-500">{fieldErrors.name}</p>
-                )}
-              </div>
-
-              {/* Email */}
-              <div>
-                <Label>
-                  Email<span className="text-error-500">*</span>
-                </Label>
-                <Input
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  defaultValue={formData.email}
-                  onChange={handleChange}
+                <label
+                  htmlFor="avatar"
+                  className="absolute bottom-0 right-0 bg-brand-500 text-white text-xs px-2 py-1 rounded-full cursor-pointer hover:bg-brand-600"
+                >
+                  Edit
+                </label>
+                <input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
                 />
-                {fieldErrors.email && (
-                  <p className="mt-1 text-sm text-error-500">{fieldErrors.email}</p>
-                )}
               </div>
-
-              {/* Password */}
-              <div>
-                <Label>
-                  Password<span className="text-error-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    placeholder="Enter your password"
-                    defaultValue={formData.password}
-                    onChange={handleChange}
-                  />
-                  {fieldErrors.password && (
-                    <p className="mt-1 text-sm text-error-500">{fieldErrors.password}</p>
-                  )}
-                  <span
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                  >
-                    {showPassword ? (
-                      <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                    ) : (
-                      <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Terms */}
-              <div className="flex items-center gap-3">
-                <Checkbox checked={isChecked} onChange={setIsChecked} />
-                <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
-                  By creating an account you agree to our{" "}
-                  <span className="text-gray-800 dark:text-white/90">
-                    Terms and Conditions
-                  </span>{" "}
-                  and{" "}
-                  <span className="text-gray-800 dark:text-white">
-                    Privacy Policy
-                  </span>
-                </p>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
-              >
-                {loading ? "Registering..." : "Sign Up"}
-              </button>
             </div>
+
+            {/* Name */}
+            <div>
+              <Label>
+                Name<span className="text-error-500">*</span>
+              </Label>
+              <Input
+                type="text"
+                name="name"
+                placeholder="Enter your name"
+                defaultValue={formData.name}
+                onChange={handleChange}
+              />
+              {fieldErrors.name && (
+                <p className="mt-1 text-sm text-error-500">
+                  {fieldErrors.name}
+                </p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <Label>
+                Email<span className="text-error-500">*</span>
+              </Label>
+              <Input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                defaultValue={formData.email}
+                onChange={handleChange}
+              />
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-error-500">
+                  {fieldErrors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <Label>
+                Password<span className="text-error-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Enter your password"
+                  defaultValue={formData.password}
+                  onChange={handleChange}
+                />
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                >
+                  {showPassword ? (
+                    <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
+                  ) : (
+                    <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
+                  )}
+                </span>
+              </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-error-500">
+                  {fieldErrors.password}
+                </p>
+              )}
+            </div>
+
+            {/* Terms */}
+            <div className="flex items-center gap-3">
+              <Checkbox checked={isChecked} onChange={setIsChecked} />
+              <p className="inline-block font-normal text-gray-500 dark:text-gray-400">
+                By creating an account you agree to our{" "}
+                <span className="text-gray-800 dark:text-white/90">
+                  Terms and Conditions
+                </span>{" "}
+                and{" "}
+                <span className="text-gray-800 dark:text-white">
+                  Privacy Policy
+                </span>
+              </p>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+            >
+              {loading ? "Registering..." : "Sign Up"}
+            </button>
           </form>
 
           {/* Footer */}
