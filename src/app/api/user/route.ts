@@ -94,7 +94,7 @@ export async function PUT(req: Request) {
       // Delete old avatar if not default
       if (
         existingUser.avatar &&
-        existingUser.avatar !== "/images/default-avatar.png"
+        existingUser.avatar !== "/images/user/user.jpg"
       ) {
         const oldPath = path.join(process.cwd(), "public", existingUser.avatar);
         try {

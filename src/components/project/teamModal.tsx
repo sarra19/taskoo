@@ -76,7 +76,7 @@ const handleOpenTaskModal = (memberId: string) => {
                 >
                   <div className="flex items-center gap-3">
                     <Image
-                      src={member.avatar || "/images/default-avatar.png"}
+                      src={member.avatar || "/images/user/user.jpg"}
                       alt={member.name || "member"}
                       width={40}
                       height={40}

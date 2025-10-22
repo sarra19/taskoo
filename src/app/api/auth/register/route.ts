@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // 🧩 Handle avatar upload (save in /public/images)
-    let avatarUrl = "/images/default-avatar.png";
+    let avatarUrl = "/images/user/user.jpg";
 
     if (avatarFile && avatarFile.size > 0) {
       const bytes = await avatarFile.arrayBuffer();

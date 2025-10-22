@@ -27,7 +27,7 @@ const UserSchema = new Schema<IUser>(
     // 👇 Nouveau champ : image de profil (URL)
     avatar: {
       type: String,
-      default: "/images/default-avatar.png",
+      default: "/images/user/user.jpg",
     },
   },
   { timestamps: true }

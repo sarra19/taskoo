@@ -53,7 +53,7 @@ export default function UserDropdown() {
             width={44}
             height={44}
             // ✅ affiche l’avatar réel du user connecté ou une image par défaut
-            src={user.avatar || "/images/default-avatar.png"}
+            src={user.avatar || "/images/user/user.jpg"}
             alt={user.name}
             className="object-cover"
           />
